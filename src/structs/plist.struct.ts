@@ -8,7 +8,7 @@ import type { RawNodeInterface } from '@structs/interfaces/plist.struct.interfac
  * Imports
  */
 import { XMLParsingError } from '@errors/xml.error';
-import { decodeEscaping } from '@components/escape.component';
+import { decodeEscaping, encodeEscaping } from '@components/escape.component';
 
 /**
  * The `encodeValue` function encodes a given value into an XML-like format, transforming it into a string representation
@@ -70,7 +70,7 @@ import { decodeEscaping } from '@components/escape.component';
 export function encodeValue(value: unknown): string {
     switch (typeof value) {
         case 'string':
-            return encodeTag('string', value);
+            return encodeTag('string', encodeEscaping(value));
 
         case 'number':
             const type = Number.isInteger(value) ? 'integer' : 'real';
@@ -93,7 +93,7 @@ export function encodeValue(value: unknown): string {
 
             if (value !== null) {
                 const data = Object.entries(value as Record<string, unknown>)
-                    .map(([ key, val ]) => `<key>${ key }</key>${ encodeValue(val) }`)
+                    .map(([ key, val ]) => `${ encodeTag('key', encodeEscaping(key)) }${ encodeValue(val) }`)
                     .join('');
 
                 return encodeTag('dict', data);

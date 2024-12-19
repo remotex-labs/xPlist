@@ -36,7 +36,7 @@ import {
     unpackOffsetTable
 } from '@structs/binary.struct';
 import { BinaryParsingError } from '@errors/binary.error';
-import { integerByteLength, readInteger, writeInteger } from '@components/numbers.component';
+import { integerByteLength, readInteger, validateSafeInteger, writeInteger } from '@components/numbers.component';
 
 /**
  * CREATE_UID_MARKER
@@ -395,13 +395,23 @@ export function encodeObject(value: PlistObjectType, objectRef: EncodeObjectRefI
 
 export function decodeObject(buffer: Buffer, length: number, offset: number, offsets: Array<number>, objectRef: DecodeObjectRefInterface): PlistObjectType {
     const object: PlistObjectType = {};
+    let bytesLength = length * objectRef.offsetSize;
 
-    for (let i = 0; i < length; i++) {
+    if (length > 0xE) {
+        const intHeader = unpackDataHeader(buffer[offset]);
+        const size = decodeInteger(buffer, intHeader.info, offset + 1);
+        validateSafeInteger(size, 'decodeObject offsets size');
+
+        offset += (1 + 2 ** intHeader.info);
+        bytesLength = Number(size) * objectRef.offsetSize;
+    }
+
+    for (let i = 0; i < bytesLength; i += objectRef.offsetSize) {
         const keyIndex = Number(
             readInteger(buffer, <IntegerByteLengthType>objectRef.offsetSize, offset + i)
         );
         const valueIndex = Number(
-            readInteger(buffer, <IntegerByteLengthType>objectRef.offsetSize, offset + length + i)
+            readInteger(buffer, <IntegerByteLengthType>objectRef.offsetSize, offset + bytesLength + i)
         );
 
         const keyObject = decodeReference(buffer, keyIndex, offsets, objectRef);
@@ -515,8 +525,18 @@ export function encodeArray(value: PlistArrayType | Set<unknown>, length: number
 
 export function decodeArray(buffer: Buffer, length: number, offset: number, offsets: Array<number>, objectRef: DecodeObjectRefInterface): PlistArrayType {
     const array: PlistArrayType = [];
+    let bytesLength = length * objectRef.offsetSize;
 
-    for (let i = 0; i < length; i++) {
+    if (length > 0xE) {
+        const intHeader = unpackDataHeader(buffer[offset]);
+        const size = decodeInteger(buffer, intHeader.info, offset + 1);
+        validateSafeInteger(size, 'DecodeArray offsets size');
+
+        offset += (1 + 2 ** intHeader.info);
+        bytesLength = Number(size) * objectRef.offsetSize;
+    }
+
+    for (let i = 0; i < bytesLength; i += objectRef.offsetSize) {
         const index = Number(
             readInteger(buffer, <IntegerByteLengthType>objectRef.offsetSize, offset + i)
         );
@@ -567,8 +587,18 @@ export function decodeArray(buffer: Buffer, length: number, offset: number, offs
 
 export function decodeSet(buffer: Buffer, length: number, offset: number, offsets: Array<number>, objectRef: DecodeObjectRefInterface): Set<unknown> {
     const set = new Set<unknown>();
+    let bytesLength = length * objectRef.offsetSize;
 
-    for (let i = 0; i < length; i++) {
+    if (length > 0xE) {
+        const intHeader = unpackDataHeader(buffer[offset]);
+        const size = decodeInteger(buffer, intHeader.info, offset + 1);
+        validateSafeInteger(size, 'decodeSet offsets size');
+
+        offset += (1 + 2 ** intHeader.info);
+        bytesLength = Number(size) * objectRef.offsetSize;
+    }
+
+    for (let i = 0; i < bytesLength; i += objectRef.offsetSize) {
         const index = Number(
             readInteger(buffer, <IntegerByteLengthType>objectRef.offsetSize, offset + i)
         );

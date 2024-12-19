@@ -46,6 +46,71 @@ import { integerByteLength, readInteger, writeInteger } from '@components/number
 const CREATE_UID_MARKER = '__isCreateUID';
 
 /**
+ * The `countElements` function counts all elements in a given data structure,
+ * which can be an array, object, or a mix of both, including nested structures.
+ * It handles nested arrays, objects,
+ * and primitive values (such as strings, numbers, and booleans) without recursion to avoid stack overflow issues.
+ *
+ * - **Input**:
+ *   - `data`: The input data to be processed. It can be:
+ *     - An `array`: The function will iterate through all elements in the array, including nested arrays and objects.
+ *     - An `object`:
+ *     The function will iterate through all values of the object's properties, including nested arrays and objects.
+ *     - A `primitive value` (string, number, boolean, etc.): The function will count each primitive as a single element.
+ *
+ * - **Output**:
+ *   - A `number`: The total count of elements in the structure, including all nested elements.
+ *
+ * ## Example:
+ * ```ts
+ * const data = {
+ *   a: [1, 2, { b: 3, c: [4, 5] }],
+ *   d: 'string',
+ *   e: { f: [6, 7], g: 'hello' },
+ * };
+ * console.log(countElements(data)); // Output: 10
+ *
+ * const simpleArray = [1, 2, 3, 4];
+ * console.log(countElements(simpleArray)); // Output: 4
+ *
+ * const simpleObject = { a: 1, b: 2, c: 3 };
+ * console.log(countElements(simpleObject)); // Output: 3
+ * ```
+ *
+ * ## Error Handling:
+ * - No specific error handling is implemented, as the function is designed to handle mixed data types gracefully.
+ *
+ * ## Notes:
+ * - The function uses an iterative approach with a stack to avoid recursion,
+ * making it suitable for deep nested structures.
+ * - The function treats arrays, objects, and primitive values independently but counts all elements they contain.
+ *
+ * @param data - The data structure (array, object, or primitive) to count the elements from.
+ * @returns The total number of elements in the data structure.
+ */
+
+export function countElements(data: unknown): number {
+    let count = 0;
+    const stack: Array<unknown> = [ data ]; // Start with the initial data in the stack
+
+    while (stack.length > 0) {
+        const current = stack.pop();
+        count += 1;
+
+        if (Array.isArray(current)) {
+            stack.push(...current);
+        } else if (current && typeof current === 'object') {
+            const elements = Object.values(current);
+            count += elements.length;
+            stack.push(...elements);
+        }
+    }
+
+    return count;
+}
+
+
+/**
  * The `CreateUID` function generates a unique identifier (UID) as a `Buffer` from a given input.
  * The input can be a string, a number, or an existing `Buffer`.
  * It returns a `Buffer` representation of the UID,

@@ -386,7 +386,7 @@ export function decodeObjects(data: string, regex: RegExp, tag: string): PlistOb
  */
 
 export function decodeTags(contents: string): unknown {
-    const regex = /<(\/?)([a-zA-Z0-9]+)([^>]*)>/g;
+    const regex = /<(\/?)([a-zA-Z0-9]+)([^\/>]*)(\/?)>/g;
     const tagData = regex.exec(contents);
     if (!tagData)
         throw new XMLParsingError(

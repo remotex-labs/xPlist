@@ -3,7 +3,6 @@
  */
 
 import type {
-    OffsetsInterface,
     DecodeObjectRefInterface,
     EncodeObjectRefInterface
 } from '@services/interfaces/binary.service.interface';
@@ -37,13 +36,78 @@ import {
     unpackOffsetTable
 } from '@structs/binary.struct';
 import { BinaryParsingError } from '@errors/binary.error';
-import { integerByteLength, readInteger, writeInteger } from '@components/numbers.component';
+import { integerByteLength, readInteger, validateSafeInteger, writeInteger } from '@components/numbers.component';
 
 /**
  * CREATE_UID_MARKER
  */
 
 const CREATE_UID_MARKER = '__isCreateUID';
+
+/**
+ * The `countElements` function counts all elements in a given data structure,
+ * which can be an array, object, or a mix of both, including nested structures.
+ * It handles nested arrays, objects,
+ * and primitive values (such as strings, numbers, and booleans) without recursion to avoid stack overflow issues.
+ *
+ * - **Input**:
+ *   - `data`: The input data to be processed. It can be:
+ *     - An `array`: The function will iterate through all elements in the array, including nested arrays and objects.
+ *     - An `object`:
+ *     The function will iterate through all values of the object's properties, including nested arrays and objects.
+ *     - A `primitive value` (string, number, boolean, etc.): The function will count each primitive as a single element.
+ *
+ * - **Output**:
+ *   - A `number`: The total count of elements in the structure, including all nested elements.
+ *
+ * ## Example:
+ * ```ts
+ * const data = {
+ *   a: [1, 2, { b: 3, c: [4, 5] }],
+ *   d: 'string',
+ *   e: { f: [6, 7], g: 'hello' },
+ * };
+ * console.log(countElements(data)); // Output: 10
+ *
+ * const simpleArray = [1, 2, 3, 4];
+ * console.log(countElements(simpleArray)); // Output: 4
+ *
+ * const simpleObject = { a: 1, b: 2, c: 3 };
+ * console.log(countElements(simpleObject)); // Output: 3
+ * ```
+ *
+ * ## Error Handling:
+ * - No specific error handling is implemented, as the function is designed to handle mixed data types gracefully.
+ *
+ * ## Notes:
+ * - The function uses an iterative approach with a stack to avoid recursion,
+ * making it suitable for deep nested structures.
+ * - The function treats arrays, objects, and primitive values independently but counts all elements they contain.
+ *
+ * @param data - The data structure (array, object, or primitive) to count the elements from.
+ * @returns The total number of elements in the data structure.
+ */
+
+export function countElements(data: unknown): number {
+    let count = 0;
+    const stack: Array<unknown> = [ data ]; // Start with the initial data in the stack
+
+    while (stack.length > 0) {
+        const current = stack.pop();
+        count += 1;
+
+        if (Array.isArray(current)) {
+            stack.push(...current);
+        } else if (current && typeof current === 'object') {
+            const elements = Object.values(current);
+            count += elements.length;
+            stack.push(...elements);
+        }
+    }
+
+    return count;
+}
+
 
 /**
  * The `CreateUID` function generates a unique identifier (UID) as a `Buffer` from a given input.
@@ -217,34 +281,56 @@ export function decodeReference(buffer: Buffer, index: number, offsets: Array<nu
 }
 
 /**
- * The `encodeObject` function encodes an object by serializing its keys and values. It utilizes references to encode
- * both keys and values, ensuring that repeated objects are efficiently encoded only once. The resulting encoded data
- * is returned as an array of `Buffer` objects, including the object header and serialized data.
+ * Encodes an object into a binary format compatible with property lists (bplist).
+ *
+ * This function takes an object with key-value pairs and encodes it into binary buffers.
+ * It tracks references to each key and value in the object, generating metadata and binary
+ * representations for each element.
+ *
+ * The function performs the following steps:
+ * 1. Iterates over the keys of the object.
+ * 2. Encodes each key and its corresponding value using `encodeReference`, which resolves references
+ *    and generates buffers for each element.
+ * 3. Creates a binary object representation of the metadata, including references to keys and values.
+ * 4. Combines the metadata and encoded keys/values into an array of buffers for output.
  *
  * - **Input**:
- *   - `value`: The object to encode, where keys are string values and values can be of any type that is supported by the encoder.
- *   - `objectRef`: An object that maintains references for encoding, including an offset and a map to track already encoded objects.
+ *   - `value`: An object whose key-value pairs are to be encoded.
+ *   Keys are always strings, while values
+ *     can be of mixed types.
+ *   - `objectRef`: An object implementing `EncodeObjectRefInterface` to manage object references and
+ *     offsets during encoding.
  *
  * - **Output**:
- *   - An array of `Buffer` objects containing the encoded representation of the object, including headers and serialized data for both keys and values.
+ *   - An array of `Buffer` objects representing the encoded object, including metadata and key-value data.
  *
  * ## Example:
  * ```ts
- * const encodedData = encodeObject({ key1: "value1", key2: "value2" }, objectRef);
+ * const myObject = { name: "Alice", age: 30, hobbies: ["reading", "cycling"] };
+ * const encodeInfo: EncodeObjectRefInterface = {
+ *   map: new Map(),
+ *   offset: 1,
+ *   numberOfObjects: 0,
+ *   offsetTableOffset: 0,
+ *   objectReferenceSize: 0,
+ *   offsetTableOffsetSize: 0
+ * };
+ * const encodedObject = encodeObject(myObject, encodeInfo);
  * ```
  *
  * ## Error Handling:
- * - There are no explicit error handling mechanisms in this function. Errors may occur if the `encodeReference` function
- *   or any internal encoding process fails due to malformed data or corrupted input.
+ * - Throws an error if any key or value in the object cannot be encoded.
+ * - Ensures that references to keys and values are correctly resolved and prevents invalid references.
  *
  * ## Notes:
- * - The function handles encoding objects with potentially nested values by recursively encoding keys and values through `encodeReference`.
- * - The function ensures that previously encoded references are reused through the `objectRef.map`.
- * - The object header encoding includes the number of keys and values in the object and their respective reference data.
+ * - The `encodeReference` function handles the encoding of each key and value, updating the
+ *   `keyReferenceMap` and `valueReferenceMap` respectively.
+ * - The `encodeObjects` function generates the metadata for the object, including references to keys and values.
+ * - Updates the `objectRef` object with new offsets and object counts as keys and values are encoded.
  *
- * @param value - The object to encode, where keys are string values, and values are of any supported type.
- * @param objectRef - The object containing encoding state, including references and the current offset.
- * @returns An array of Buffers that encodes the object, including key-value pairs and headers.
+ * @param value - The object to encode into binary format.
+ * @param objectRef - An object implementing `EncodeObjectRefInterface` for managing references and offsets during encoding.
+ * @returns An array of `Buffer` objects representing the encoded data, including metadata and key-value buffers.
  */
 
 export function encodeObject(value: PlistObjectType, objectRef: EncodeObjectRefInterface): Array<Buffer> {
@@ -258,13 +344,9 @@ export function encodeObject(value: PlistObjectType, objectRef: EncodeObjectRefI
         encodedData.push(...encodeReference(value[key], objectRef, valueReferenceMap));
     }
 
-    if (objectRef.offsetSize === 0) {
-        objectRef.offsetSize = integerByteLength(objectRef.offset);
-    }
-
     return [
         encodeObjects(
-            Object.keys(value).length, 0xD, [ ...keyReferenceMap, ...valueReferenceMap ], objectRef.offsetSize
+            Object.keys(value).length, 0xD, [ ...keyReferenceMap, ...valueReferenceMap ], objectRef.objectReferenceSize
         ),
         ...encodedData
     ];
@@ -313,13 +395,23 @@ export function encodeObject(value: PlistObjectType, objectRef: EncodeObjectRefI
 
 export function decodeObject(buffer: Buffer, length: number, offset: number, offsets: Array<number>, objectRef: DecodeObjectRefInterface): PlistObjectType {
     const object: PlistObjectType = {};
+    let bytesLength = length * objectRef.offsetSize;
 
-    for (let i = 0; i < length; i++) {
+    if (length > 0xE) {
+        const intHeader = unpackDataHeader(buffer[offset]);
+        const size = decodeInteger(buffer, intHeader.info, offset + 1);
+        validateSafeInteger(size, 'decodeObject offsets size');
+
+        offset += (1 + 2 ** intHeader.info);
+        bytesLength = Number(size) * objectRef.offsetSize;
+    }
+
+    for (let i = 0; i < bytesLength; i += objectRef.offsetSize) {
         const keyIndex = Number(
             readInteger(buffer, <IntegerByteLengthType>objectRef.offsetSize, offset + i)
         );
         const valueIndex = Number(
-            readInteger(buffer, <IntegerByteLengthType>objectRef.offsetSize, offset + length + i)
+            readInteger(buffer, <IntegerByteLengthType>objectRef.offsetSize, offset + bytesLength + i)
         );
 
         const keyObject = decodeReference(buffer, keyIndex, offsets, objectRef);
@@ -330,40 +422,55 @@ export function decodeObject(buffer: Buffer, length: number, offset: number, off
 }
 
 /**
- * The `encodeArray` function encodes an array (or a Set) by serializing its elements and their references.
- * It handles the encoding of each element in the array, collects reference mappings, and serializes
- * the length of the array.
- * The function returns a list of Buffers representing the encoded data.
+ * Encodes an array or set into a binary format compatible with property lists (bplist).
+ *
+ * This function encodes an input `array` or `Set` into binary buffers.
+ * The function tracks references to each element
+ * in the input, ensuring proper metadata is generated for the encoded structure.
+ *
+ * The function performs the following steps:
+ * 1. Iterates over the elements in the input array or set.
+ * 2. Encodes each element using `encodeReference`, which resolves references and generates buffers.
+ * 3. Creates a binary object representation of the array or set metadata, including references and object types.
+ * 4. Combines metadata and encoded elements into an array of buffers for output.
  *
  * - **Input**:
- *   - `value`: The array or Set (`PlistArrayType | Set<unknown>`) to be encoded.
- *   - `length`: The length of the array or Set.
- *   - `type`: The type identifier for the encoded data.
- *   - `objectRef`: The encoding reference interface that manages object reference mappings and offset size.
+ *   - `value`: An array or set of elements to encode. Elements can be of mixed types.
+ *   - `length`: The number of elements in the array or set.
+ *   - `type`: The type identifier for the array or set in the binary format.
+ *   - `objectRef`: An object implementing `EncodeObjectRefInterface` to manage object references and offsets during encoding.
  *
  * - **Output**:
- *   - An array of Buffers representing the encoded form of the array or Set,
- *   including the serialized references and their data.
+ *   - An array of `Buffer` objects representing the encoded array or set, including metadata and element data.
  *
  * ## Example:
  * ```ts
- * const encodedArray = encodeArray(array, array.length, 0xA, objectRef);
+ * const mySet = new Set([1, "two", { key: "value" }]);
+ * const encodeInfo: EncodeObjectRefInterface = {
+ *   map: new Map(),
+ *   offset: 1,
+ *   numberOfObjects: 0,
+ *   offsetTableOffset: 0,
+ *   objectReferenceSize: 0,
+ *   offsetTableOffsetSize: 0
+ * };
+ * const encodedArray = encodeArray(mySet, mySet.size, 0xA0, encodeInfo);
  * ```
  *
  * ## Error Handling:
- * - The function assumes the `value` is an array or Set. If a non-iterable object is provided, it may result in unexpected behavior.
- * - The `objectRef` should be properly initialized, and the offset size should be calculated correctly for the encoding.
+ * - Throws an error if any element in the array or set cannot be encoded.
+ * - Ensures that references are correctly resolved to prevent circular dependencies.
  *
  * ## Notes:
- * - The `encodeReference` function is used to encode the individual elements of the array or Set.
- * - The encoded data includes the reference map, ensuring efficient handling of object references.
- * - The final encoded result consists of a buffer for the object length and serialized references, followed by the data of the individual elements.
+ * - The `encodeReference` function handles encoding of individual elements and updates the `referenceMap`.
+ * - The `encodeObjects` function creates the binary metadata for the array or set, including references to its elements.
+ * - Updates the `objectRef` object with new offsets and object counts as elements are encoded.
  *
- * @param value - The array or Set to be encoded.
- * @param length - The length of the array or Set.
- * @param type - The type identifier used for the encoding.
- * @param objectRef - The encoding reference interface containing the reference map and offset size.
- * @returns An array of Buffers representing the encoded array or Set.
+ * @param value - An array or set to encode into binary format.
+ * @param length - The number of elements in the input array or set.
+ * @param type - A type identifier representing the array or set in the bplist format.
+ * @param objectRef - An object implementing `EncodeObjectRefInterface` for managing references and offsets during encoding.
+ * @returns An array of `Buffer` objects representing the encoded data, including metadata and element buffers.
  */
 
 export function encodeArray(value: PlistArrayType | Set<unknown>, length: number, type: number, objectRef: EncodeObjectRefInterface): Array<Buffer> {
@@ -374,12 +481,8 @@ export function encodeArray(value: PlistArrayType | Set<unknown>, length: number
         encodedData.push(...encodeReference(item, objectRef, referenceMap));
     }
 
-    if (objectRef.offsetSize === 0) {
-        objectRef.offsetSize = integerByteLength(objectRef.offset);
-    }
-
     return [
-        encodeObjects(length, type, referenceMap, objectRef.offsetSize),
+        encodeObjects(length, type, referenceMap, objectRef.objectReferenceSize),
         ...encodedData
     ];
 }
@@ -422,8 +525,18 @@ export function encodeArray(value: PlistArrayType | Set<unknown>, length: number
 
 export function decodeArray(buffer: Buffer, length: number, offset: number, offsets: Array<number>, objectRef: DecodeObjectRefInterface): PlistArrayType {
     const array: PlistArrayType = [];
+    let bytesLength = length * objectRef.offsetSize;
 
-    for (let i = 0; i < length; i++) {
+    if (length > 0xE) {
+        const intHeader = unpackDataHeader(buffer[offset]);
+        const size = decodeInteger(buffer, intHeader.info, offset + 1);
+        validateSafeInteger(size, 'DecodeArray offsets size');
+
+        offset += (1 + 2 ** intHeader.info);
+        bytesLength = Number(size) * objectRef.offsetSize;
+    }
+
+    for (let i = 0; i < bytesLength; i += objectRef.offsetSize) {
         const index = Number(
             readInteger(buffer, <IntegerByteLengthType>objectRef.offsetSize, offset + i)
         );
@@ -474,8 +587,18 @@ export function decodeArray(buffer: Buffer, length: number, offset: number, offs
 
 export function decodeSet(buffer: Buffer, length: number, offset: number, offsets: Array<number>, objectRef: DecodeObjectRefInterface): Set<unknown> {
     const set = new Set<unknown>();
+    let bytesLength = length * objectRef.offsetSize;
 
-    for (let i = 0; i < length; i++) {
+    if (length > 0xE) {
+        const intHeader = unpackDataHeader(buffer[offset]);
+        const size = decodeInteger(buffer, intHeader.info, offset + 1);
+        validateSafeInteger(size, 'decodeSet offsets size');
+
+        offset += (1 + 2 ** intHeader.info);
+        bytesLength = Number(size) * objectRef.offsetSize;
+    }
+
+    for (let i = 0; i < bytesLength; i += objectRef.offsetSize) {
         const index = Number(
             readInteger(buffer, <IntegerByteLengthType>objectRef.offsetSize, offset + i)
         );
@@ -486,51 +609,67 @@ export function decodeSet(buffer: Buffer, length: number, offset: number, offset
 }
 
 /**
- * The `packData` function packs multiple data buffers and an offset table into a single buffer.
- * It calculates the offsets of each data buffer
- * and combines them with the corresponding offset table into one final buffer.
+ * Packs encoded binary data and generates an offset table.
+ *
+ * This function takes an array of `Buffer`
+ * objects (or a single `Buffer`) and combines them into a single binary structure.
+ * It calculates offsets for each data object, determines the required offset size,
+ * and appends an offset table to the packed data.
+ *
+ * The function performs the following steps:
+ * 1. Converts the input into an array of `Buffer` objects (if it's a single `Buffer`).
+ * 2. Calculates offsets for each object based on their lengths and updates the `info.offsetTableOffset`.
+ * 3. Determines the size of offsets required to reference all objects efficiently.
+ * 4. Combines the data objects and the offset table into a single output `Buffer`.
  *
  * - **Input**:
- *   - `data`: A single `Buffer` or an array of `Buffer` objects to be packed.
- *   - `info`: An object containing metadata related to offsets, such as the current offset and the number of objects.
+ *   - `data`: A `Buffer` or an array of `Buffer` objects to be packed.
+ *   - `info`: An object implementing `EncodeObjectRefInterface` that tracks encoding metadata, including offsets and object counts.
  *
  * - **Output**:
- *   - A `Buffer` containing the concatenated data buffers and their corresponding offset table.
+ *   - A `Buffer` containing the packed binary data followed by the offset table.
  *
  * ## Example:
  * ```ts
- * const packedData = packData([buffer1, buffer2], { offset: 0, offsetSize: 2, numberOfObject: 0 });
+ * const dataBuffers = [Buffer.from("object1"), Buffer.from("object2")];
+ * const encodeInfo: EncodeObjectRefInterface = {
+ *   map: new Map(),
+ *   offset: 1,
+ *   numberOfObjects: 0,
+ *   offsetTableOffset: 0,
+ *   objectReferenceSize: 0,
+ *   offsetTableOffsetSize: 0
+ * };
+ * const packed = packData(dataBuffers, encodeInfo);
  * ```
  *
  * ## Error Handling:
- * - The function assumes that `info` is correctly initialized, with valid offset and number of objects.
- * - If `info.offset` is set to a value beyond `Number.MAX_SAFE_INTEGER`,
- * it may result in unexpected behavior or overflow errors.
- * - The offset size is determined by the largest offset, which is calculated during the packing process.
+ * - Ensures that offsets are calculated correctly to avoid buffer overflows.
+ * - Throws an error if any invalid or incompatible `Buffer` is provided.
  *
  * ## Notes:
- * - The `integerByteLength` function is used to determine the size of the largest offset to calculate the appropriate offset size.
- * - The `packOffsetTable` function is used to generate the final offset table that links each data buffer with its position.
- * - The function will return a single `Buffer` that combines all the data buffers followed by the offset table.
+ * - The `integerByteLength` function is used to determine the size in bytes of the largest offset.
+ * - The `packOffsetTable` function generates a binary representation of the offset table based on the calculated offsets.
+ * - Updates `info.numberOfObjects` and `info.offsetTableOffsetSize` with calculated values.
  *
- * @param data - A single buffer or an array of buffers to be packed.
- * @param info - An object containing offset metadata.
- * @returns The packed buffer that contains the data buffers and the offset table.
+ * @param data - A single `Buffer` or an array of `Buffer` objects to be packed.
+ * @param info - An object implementing `EncodeObjectRefInterface` for tracking metadata during the encoding process.
+ * @returns A `Buffer` containing the packed data and offset table.
  */
 
-export function packData(data: Buffer | Buffer[], info: OffsetsInterface): Buffer {
+export function packData(data: Buffer | Buffer[], info: EncodeObjectRefInterface): Buffer {
     const offsets: number[] = [];
     const dataArray = Array.isArray(data) ? data : [ data ];
-    info.numberOfObject = dataArray.length;
+    info.numberOfObjects = dataArray.length;
 
     // Calculate offsets
     for (const object of dataArray) {
-        offsets.push(info.offset);
-        info.offset += object.length;
+        offsets.push(info.offsetTableOffset);
+        info.offsetTableOffset += object.length;
     }
 
     // Determine offset size based on the largest offset
-    info.offsetSize = integerByteLength(offsets[offsets.length - 1]);
+    info.offsetTableOffsetSize = integerByteLength(offsets[offsets.length - 1]);
 
     // Combine data and offset table into a single buffer
     return Buffer.concat([ ...dataArray, packOffsetTable(offsets) ]);
@@ -667,35 +806,41 @@ export function decodeType(data: Buffer, offset: number, offsets: Array<number>,
 }
 
 /**
- * Encodes data into a binary property list format (bplist).
+ * Encodes data into a binary property list (bplist) format.
  *
- * This function creates a binary representation of the provided data in the bplist format, which includes the header, packed data, and trailer.
- * It uses specific structures to define the layout of the binary data, with special handling for offsets, references, and encoding types.
+ * This function takes input data of type `T`, encodes it into a binary format, and returns it as a `Buffer`.
+ * The encoding process involves creating a header, packing the encoded data, and appending a trailer containing metadata.
  *
- * The function supports a wide variety of types, including objects, arrays, buffers, dates, and primitive values, by leveraging the `encodeType` function.
- * The final output is a `Buffer` representing the entire binary property list, which can be saved or transmitted as required.
+ * The function performs the following steps:
+ * 1. Constructs a header buffer with the required `bplist` magic and version.
+ * 2. Tracks encoding metadata, such as offsets and the number of objects.
+ * 3. Encodes the input data using helper functions and packs it into a binary format.
+ * 4. Creates a trailer buffer with metadata such as object counts, reference sizes, and offsets.
+ * 5. Combines the header, packed data, and trailer into a single `Buffer` for output.
  *
  * - **Input**:
- *   - `data`: The data to be encoded, which can be of any type (`unknown`).
+ *   - `data`: The data to be encoded. Can be of any type `T`.
  *
  * - **Output**:
- *   - A `Buffer` containing the binary encoded representation of the data.
+ *   - A `Buffer` containing the binary-encoded property list representation of the input data.
  *
  * ## Example:
  * ```ts
- * const binaryData = encodeBinary(myData);
+ * const myData = { key: "value", numbers: [1, 2, 3] };
+ * const encodedBinary = encodeBinary(myData);
  * ```
  *
  * ## Error Handling:
- * - Throws a `BinaryParsingError` if the provided data cannot be encoded correctly.
+ * - Throws an error if the input data cannot be encoded into a binary format.
+ * - Ensures offsets and metadata are correctly calculated, throwing errors on invalid configurations.
  *
  * ## Notes:
- * - The header contains magic and version information to identify the binary format.
- * - The data is encoded and packed with calculated offsets to ensure correct references.
- * - The trailer includes metadata such as the number of objects and offsets in the encoded data.
+ * - The `headerStruct` and `trailerStruct` are used for creating the binary header and trailer, respectively.
+ * - The `encodeType` function is responsible for encoding the input data into binary objects, while `packData` handles packing these objects into a buffer.
+ * - The `integerByteLength` function determines the byte size needed for referencing objects based on the number of elements in the data.
  *
- * @param data - The data to encode into binary format.
- * @returns The binary encoded representation of the data.
+ * @param data - The data to encode into a binary property list format.
+ * @returns A `Buffer` containing the binary-encoded representation of the input data.
  */
 
 export function encodeBinary<T = unknown>(data: T): Buffer {
@@ -706,26 +851,25 @@ export function encodeBinary<T = unknown>(data: T): Buffer {
     });
 
     // Initialize offset tracking info
-    const info: OffsetsInterface = {
-        offset: headerBuffer.length,
-        offsetSize: 0,
-        numberOfObject: 0
+    const info: EncodeObjectRefInterface = {
+        map: new Map<unknown, number>(),
+        offset: 1,
+        numberOfObjects: 0,
+        offsetTableOffset: headerBuffer.length,
+        objectReferenceSize: integerByteLength(countElements(data)),
+        offsetTableOffsetSize: 0
     };
 
     // Encode data and pack it into a buffer
-    const packedData = packData(encodeType(data, {
-        map: new Map<unknown, number>(),
-        offset: 1,
-        offsetSize: 0
-    }), info);
+    const packedData = packData(encodeType(data, info), info);
 
     // Create the trailer buffer
     const trailerBuffer = trailerStruct.toBuffer({
-        numberOfObjects: BigInt(info.numberOfObject),
+        numberOfObjects: BigInt(info.numberOfObjects),
         rootObjectOffset: 0n,
-        offsetTableOffset: BigInt(info.offset),
-        objectReferenceSize: 1,
-        offsetTableOffsetSize: info.offsetSize
+        offsetTableOffset: BigInt(info.offsetTableOffset),
+        objectReferenceSize: info.objectReferenceSize,
+        offsetTableOffsetSize: info.offsetTableOffsetSize
     });
 
     // Concatenate header, packed data, and trailer into the final buffer

@@ -145,9 +145,9 @@ export function encodeValue(value: unknown): string {
  * @returns A string representing the XML-like encoded value with the specified tag.
  */
 
-export function encodeTag(tag: string, value: unknown): string {
-    if (typeof value === 'boolean')
-        return value ? '<true/>' : '<false/>';
+export function encodeTag(tag: string, value: string | number | boolean): string {
+    if (typeof value === 'string' && value === '') return `<${ tag }/>`;
+    if (typeof value === 'boolean') return value ? '<true/>' : '<false/>';
 
     return `<${ tag }>${ value }</${ tag }>`;
 }

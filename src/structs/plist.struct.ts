@@ -258,9 +258,14 @@ export function decodeContentOfTag(data: string, startOffset: number, endOffset:
 
 /**
  * The `decodeTag` function extracts and decodes the content between a given start tag and its corresponding end tag
- * from the provided string. It first calls the `decodeClosingTag` function to locate the closing tag, and then extracts
- * the content between the start and end tags using `decodeContentOfTag`. The extracted content is returned as a decoded
- * string, with any escape sequences handled by `decodeEscaping`.
+ * from the provided string.
+ * It first calls the `decodeClosingTag` function to locate the closing tag (if applicable),
+ * and then extracts the content between the start and end tags using `decodeContentOfTag`.
+ * The extracted content is
+ * returned as a decoded string, with any escape sequences handled by `decodeEscaping`.
+ *
+ * If the `selfClose` parameter is set to `true`, the function bypasses the decoding process and immediately returns
+ * an empty string, as no content is expected between self-closing tags.
  *
  * This function is useful for extracting and decoding the content within specific tags, such as XML or plist tags,
  * while handling escape sequences.
@@ -269,9 +274,12 @@ export function decodeContentOfTag(data: string, startOffset: number, endOffset:
  *   - `data`: A string containing the data to extract and decode.
  *   - `regex`: A regular expression used to locate the end tag.
  *   - `startTag`: The name of the start tag to match with the closing tag.
+ *   - `selfClose`: A boolean indicating whether the tag is self-closing.
+ *   Defaults to `false`.
  *
  * - **Output**:
- *   - A string containing the decoded content between the start and end tags.
+ *   - A string containing the decoded content between the start and end tags,
+ *   or an empty string for self-closing tags.
  *
  * ## Example:
  * ```ts
@@ -279,9 +287,14 @@ export function decodeContentOfTag(data: string, startOffset: number, endOffset:
  * const regex = /<\/?(\w+)>/g;
  * const result = decodeTag(data, regex, regex.exec(data)![1]);
  * console.log(result); // 'name'
+ *
+ * const selfClosingData = '<input />';
+ * const resultSelfClose = decodeTag(selfClosingData, regex, 'input', true);
+ * console.log(resultSelfClose); // ''
  * ```
  *
  * ## Error Handling:
+ * - If the `selfClose` parameter is `true`, no decoding or extraction occurs.
  * - If the end tag is missing, invalid, or mismatched, an `XMLParsingError` will be thrown by the `decodeClosingTag` function.
  * - If the content between the start and end tags cannot be extracted, the function will return an empty string.
  * - The function assumes that the content between the tags is valid and properly escaped. If any issues occur during the
@@ -290,11 +303,13 @@ export function decodeContentOfTag(data: string, startOffset: number, endOffset:
  * @param data - The string containing the data to decode.
  * @param regex - The regular expression used to locate the end tag.
  * @param startTag - The name of the start tag to match with the closing tag.
- * @returns A string containing the decoded content between the start and end tags.
+ * @param selfClose - A boolean indicating whether the tag is self-closing. Defaults to `false`.
+ * @returns A string containing the decoded content between the start and end tags, or an empty string for self-closing tags.
  * @throws {XMLParsingError} Throws an `XMLParsingError` if the end tag is missing, invalid, or mismatched.
  */
 
-export function decodeTag(data: string, regex: RegExp, startTag: string): string {
+export function decodeTag(data: string, regex: RegExp, startTag: string, selfClose: boolean = false): string {
+    if(selfClose) return '';
     const endTag = decodeClosingTag(data, regex, startTag);
 
     return decodeContentOfTag(data, endTag.offset, endTag.index);

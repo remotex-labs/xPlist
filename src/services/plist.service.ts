@@ -28,17 +28,6 @@ import { decodePrimitive, decodeTag, encodeValue } from '@structs/plist.struct';
 const objectTags = new Set([ 'dict', 'array' ]);
 
 /**
- * The `booleanTags` constant is an array of strings representing XML or plist tags
- * that correspond to boolean values.
- *
- * ## Note
- * > `Array.prototype.includes` has linear time complexity O(n), where nn is the size of the array.
- * > A `Set` has constant time complexity O(1) for lookups.
- */
-
-const booleanTags = new Set([ 'true', 'false' ]);
-
-/**
  * The `decodePlistContent` function extracts the content inside `<plist>` tags from a given plist string. It first
  * removes any unnecessary whitespace between tags and then searches for the `<plist>` tags to capture the content
  * between them. If the `<plist>` tags are not found or the XML is malformed, the function throws an `XMLParsingError`.

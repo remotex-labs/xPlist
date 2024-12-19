@@ -245,7 +245,7 @@ describe('decodeObjects', () => {
         // Assert
         expect(result).toEqual(mockNodeContent);
         expect(decodeTag).toHaveBeenCalledWith(data, regex, 'key');
-        expect(decodeTag).toHaveBeenCalledWith(data, regex, 'string');
+        expect(decodeTag).toHaveBeenCalledWith(data, regex, 'string', false);
         expect(decodePrimitive).toHaveBeenCalledWith('value1', 'string');
     });
 
@@ -346,7 +346,8 @@ describe('decodeObjects', () => {
             .mockReturnValueOnce([ 0, '', 'false' ] as any)
             .mockReturnValueOnce(null);
 
-        (decodeTag as jest.Mock).mockReturnValueOnce('isTrue').mockReturnValueOnce('isFalse');
+        let index = 0;
+        (decodeTag as jest.Mock).mockImplementation(() => (index++ > 0 ? 'isFalse' : 'isTrue'));
         (decodePrimitive as jest.Mock)
             .mockReturnValueOnce(true) // Simulate the boolean value for <true/>
             .mockReturnValueOnce(false); // Simulate the boolean value for <false/>
@@ -372,7 +373,7 @@ describe('decodeTags', () => {
         const result = decodeTags(data);
 
         expect(result).toBe('value1');
-        expect(decodeTag).toHaveBeenCalledWith(data, expect.any(RegExp), 'string');
+        expect(decodeTag).toHaveBeenCalledWith(data, expect.any(RegExp), 'string', false);
     });
 
     test('should decode a valid boolean tag', () => {
@@ -382,7 +383,7 @@ describe('decodeTags', () => {
         const result = decodeTags(data);
 
         expect(result).toBe(true);
-        expect(decodePrimitive).toHaveBeenCalledWith('true', 'true');
+        expect(decodePrimitive).toHaveBeenCalledWith(undefined, 'true');
     });
 
     test('should throw an error if malformed XML has no valid tags', () => {
@@ -401,7 +402,7 @@ describe('decodeTags', () => {
         const result = decodeTags(data);
 
         expect(result).toBe('some data');
-        expect(decodeTag).toHaveBeenCalledWith(data, expect.any(RegExp), 'unknownTag');
+        expect(decodeTag).toHaveBeenCalledWith(data, expect.any(RegExp), 'unknownTag', false);
     });
 
     test('should throw an error if an unexpected tag structure is found in the object', () => {

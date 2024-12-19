@@ -89,12 +89,12 @@ describe('encodePlist', () => {
 
     test('should encode an empty object correctly', () => {
         const result = encodePlist({});
-        expect(result).toContain('<dict></dict>');
+        expect(result).toContain('<dict/>');
     });
 
     test('should encode an empty array correctly', () => {
         const result = encodePlist([]);
-        expect(result).toContain('<array></array>');
+        expect(result).toContain('<array/>');
     });
 
     test('should throw error for unsupported types', () => {

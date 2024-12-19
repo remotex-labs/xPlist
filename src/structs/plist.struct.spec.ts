@@ -113,7 +113,7 @@ describe('encodeTag', () => {
 
     test('should handle empty string correctly', () => {
         const result = encodeTag('string', '');
-        expect(result).toBe('<string></string>');
+        expect(result).toBe('<string/>');
     });
 
     test('should return the correct tag when encoding different types with the same tag', () => {

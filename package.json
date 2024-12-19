@@ -21,10 +21,20 @@
         "xplist",
         "apple",
         "mac",
+        "ios",
         "browser",
         "plist",
         "parser",
-        "xml"
+        "xml",
+        "bplist",
+        "bplist parser",
+        "binary plist",
+        "binary plist parser",
+        "bin",
+        "parser",
+        "serialize",
+        "esm",
+        "cjs"
     ],
     "engines": {
         "node": ">=18"

@@ -28,17 +28,6 @@ import { decodePrimitive, decodeTag, encodeValue } from '@structs/plist.struct';
 const objectTags = new Set([ 'dict', 'array' ]);
 
 /**
- * The `booleanTags` constant is an array of strings representing XML or plist tags
- * that correspond to boolean values.
- *
- * ## Note
- * > `Array.prototype.includes` has linear time complexity O(n), where nn is the size of the array.
- * > A `Set` has constant time complexity O(1) for lookups.
- */
-
-const booleanTags = new Set([ 'true', 'false' ]);
-
-/**
  * The `decodePlistContent` function extracts the content inside `<plist>` tags from a given plist string. It first
  * removes any unnecessary whitespace between tags and then searches for the `<plist>` tags to capture the content
  * between them. If the `<plist>` tags are not found or the XML is malformed, the function throws an `XMLParsingError`.
@@ -245,14 +234,16 @@ export function decodeKey(data: string, regex: RegExp, startTag: string, current
     const value = nextValue[2];
     if (objectTags.has(value)) {
         const node = createNode(value);
-        stack.push(node);
+        if (!nextValue[4]) stack.push(node);
 
         return pushToObject(node.content, current, key);
     }
 
-    pushToObject(decodePrimitive(
-        booleanTags.has(value) ? value : decodeTag(data, regex, value), value
-    ), current, key);
+    pushToObject(
+        decodePrimitive(decodeTag(data, regex, value, !!nextValue[4]), value),
+        current,
+        key
+    );
 }
 
 /**
@@ -303,7 +294,7 @@ export function decodeObjects(data: string, regex: RegExp, tag: string): PlistOb
 
     let match: RegExpExecArray | null;
     while ((match = regex.exec(data)) !== null) {
-        const [ , isClosing, tag ] = match;
+        const [ , isClosing, tag, , selfClose ] = match;
         const current = stack[stack.length - 1];
         if (isClosing && objectTags.has(tag)) {
             stack.pop();
@@ -321,13 +312,14 @@ export function decodeObjects(data: string, regex: RegExp, tag: string): PlistOb
 
         if (objectTags.has(tag)) {
             const node = createNode(tag);
-            stack.push(node);
             pushToObject(node.content, current);
+            if (!selfClose) stack.push(node);
+
             continue;
         }
 
         pushToObject(decodePrimitive(
-            booleanTags.has(tag) ? tag : decodeTag(data, regex, tag), tag
+            decodeTag(data, regex, tag, !!selfClose), tag
         ), current);
     }
 
@@ -386,7 +378,7 @@ export function decodeObjects(data: string, regex: RegExp, tag: string): PlistOb
  */
 
 export function decodeTags(contents: string): unknown {
-    const regex = /<(\/?)([a-zA-Z0-9]+)([^>]*)>/g;
+    const regex = /<(\/?)([a-zA-Z0-9]+)([^\/>]*)(\/?)>/g;
     const tagData = regex.exec(contents);
     if (!tagData)
         throw new XMLParsingError(
@@ -399,7 +391,7 @@ export function decodeTags(contents: string): unknown {
         return decodeObjects(contents, regex, tag);
 
     return decodePrimitive(
-        booleanTags.has(tag) ? tag : decodeTag(contents, regex, tag), tag
+        decodeTag(contents, regex, tag, !!tagData[4]), tag
     );
 }
 

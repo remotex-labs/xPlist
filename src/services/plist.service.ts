@@ -234,14 +234,16 @@ export function decodeKey(data: string, regex: RegExp, startTag: string, current
     const value = nextValue[2];
     if (objectTags.has(value)) {
         const node = createNode(value);
-        stack.push(node);
+        if (!nextValue[4]) stack.push(node);
 
         return pushToObject(node.content, current, key);
     }
 
-    pushToObject(decodePrimitive(
-        booleanTags.has(value) ? value : decodeTag(data, regex, value), value
-    ), current, key);
+    pushToObject(
+        decodePrimitive(decodeTag(data, regex, value, !!nextValue[4]), value),
+        current,
+        key
+    );
 }
 
 /**
@@ -292,7 +294,7 @@ export function decodeObjects(data: string, regex: RegExp, tag: string): PlistOb
 
     let match: RegExpExecArray | null;
     while ((match = regex.exec(data)) !== null) {
-        const [ , isClosing, tag ] = match;
+        const [ , isClosing, tag, , selfClose ] = match;
         const current = stack[stack.length - 1];
         if (isClosing && objectTags.has(tag)) {
             stack.pop();
@@ -310,13 +312,14 @@ export function decodeObjects(data: string, regex: RegExp, tag: string): PlistOb
 
         if (objectTags.has(tag)) {
             const node = createNode(tag);
-            stack.push(node);
             pushToObject(node.content, current);
+            if (!selfClose) stack.push(node);
+
             continue;
         }
 
         pushToObject(decodePrimitive(
-            booleanTags.has(tag) ? tag : decodeTag(data, regex, tag), tag
+            decodeTag(data, regex, tag, !!selfClose), tag
         ), current);
     }
 
@@ -388,7 +391,7 @@ export function decodeTags(contents: string): unknown {
         return decodeObjects(contents, regex, tag);
 
     return decodePrimitive(
-        booleanTags.has(tag) ? tag : decodeTag(contents, regex, tag), tag
+        decodeTag(contents, regex, tag, !!tagData[4]), tag
     );
 }
 

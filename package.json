@@ -39,18 +39,36 @@
     "engines": {
         "node": ">=18"
     },
-    "exports": {
-        "./package.json": "./package.json",
-        ".": {
-            "import": {
-                "types": "./dist/index.d.ts",
-                "default": "./dist/esm/index.js"
-            },
-            "require": {
-                "types": "./dist/index.d.ts",
-                "default": "./dist/cjs/index.js"
-            }
+    "typesVersions": {
+        "*": {
+            "*": [
+                "./dist/*"
+            ],
+            "xml": [
+                "./dist/xml.d.ts"
+            ],
+            "binary": [
+                "./dist/binary.d.ts"
+            ]
         }
+    },
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/esm/index.js",
+            "require": "./dist/cjs/index.js"
+        },
+        "./xml": {
+            "types": "./dist/xml.d.ts",
+            "import": "./dist/esm/xml.js",
+            "require": "./dist/cjs/xml.js"
+        },
+        "./binary": {
+            "types": "./dist/binary.d.ts",
+            "import": "./dist/esm/binary.js",
+            "require": "./dist/cjs/binary.js"
+        },
+        "./package.json": "./package.json"
     },
     "files": [
         "dist",

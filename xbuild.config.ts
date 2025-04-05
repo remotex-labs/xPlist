@@ -29,6 +29,8 @@ const config: Array<xBuildConfig> = [
             sourcemap: true,
             sourceRoot: `https://github.com/remotex-lab/xPlist/tree/v${ pkg.version }/`,
             entryPoints: {
+                xml: 'src/xml.ts',
+                binary: 'src/binary.ts',
                 index: 'src/index.ts'
             }
         }

@@ -2,69 +2,58 @@
  * Import will remove at compile time
  */
 
-import type { RawNodeInterface } from '@structs/interfaces/plist.struct.interface';
+import type { RawNodeInterface } from '@structs/interfaces/plist-struct.interface';
 
 /**
  * Imports
  */
+
 import { XMLParsingError } from '@errors/xml.error';
 import { decodeEscaping, encodeEscaping } from '@components/escape.component';
 
 /**
- * The `encodeValue` function encodes a given value into an XML-like format, transforming it into a string representation
- * suitable for plist (Property List) encoding.
- * It handles various types of values, including strings, numbers,
- * booleans, buffers, arrays, objects, and dates,
- * by converting each type into its appropriate tag and content representation.
- * The encoded value is returned as a string.
+ * Encodes a value into XML format for Property List (plist) representation
  *
- * - **Input**:
- *   - `value`: The value to be encoded. It can be of various types, including:
- *     - `string`: Encodes as a `<string>` tag.
- *     - `number`: Encodes as either an `<integer>` or `<real>` tag, depending on whether the number is an integer.
- *     - `boolean`: Encodes as `<true>` or `<false>`.
- *     - `Buffer`: Encodes as a `<data>` tag with base64-encoded content.
- *     - `array`: Encodes as an `<array>` tag, with each element recursively encoded.
- *     - `object`: Encodes as a `<dict>` tag, with each key-value pair recursively encoded.
- *     - `Date`: Encodes as a `<date>` tag, using the ISO 8601 string representation of the date.
+ * @param value - The value to encode (supports various data types)
+ * @returns An XML string representation of the value with appropriate plist tags
  *
- * - **Output**:
- *   - A string representing the encoded plist value, including the appropriate tags for the given value type.
+ * @throws XMLParsingError - When an unsupported data type is provided
  *
- * ## Example:
+ * @remarks
+ * This function converts JavaScript values into properly formatted XML strings
+ * for plist files. It handles different data types with specific XML tags:
+ *
+ * - string: Encoded as <string> tags with XML entity escaping
+ * - number: Encoded as <integer> or <real> tags based on whether it's an integer
+ * - boolean: Encoded as <true/> or <false/> tags
+ * - Buffer: Encoded as <data> tags with base64-encoded content
+ * - Array: Encoded as <array> tags with each element recursively encoded
+ * - Object: Encoded as <dict> tags with key-value pairs
+ * - Date: Encoded as <date> tags with ISO 8601 string representation
+ *
+ * The function recursively processes nested structures to ensure complete
+ * serialization of complex data types.
+ *
+ * @example
  * ```ts
- * const str = 'Hello';
- * console.log(encodeValue(str)); // <string>Hello</string>
+ * // Simple types
+ * encodeValue("Hello") // Returns: <string>Hello</string>
+ * encodeValue(42)      // Returns: <integer>42</integer>
+ * encodeValue(3.14)    // Returns: <real>3.14</real>
+ * encodeValue(true)    // Returns: <true/>
  *
- * const num = 42;
- * console.log(encodeValue(num)); // <integer>42</integer>
+ * // Complex types
+ * encodeValue([1, "two", false])
+ * // Returns: <array><integer>1</integer><string>two</string><false/></array>
  *
- * const arr = [1, 2, 3];
- * console.log(encodeValue(arr)); // <array><integer>1</integer><integer>2</integer><integer>3</integer></array>
+ * encodeValue({ name: "John", age: 30 })
+ * // Returns: <dict><key>name</key><string>John</string><key>age</key><integer>30</integer></dict>
  *
- * const obj = { name: 'John', age: 30 };
- * console.log(encodeValue(obj)); // <dict><key>name</key><string>John</string><key>age</key><integer>30</integer></dict>
- *
- * const date = new Date('2024-12-15');
- * console.log(encodeValue(date)); // <date>2024-12-15T00:00:00.000Z</date>
+ * encodeValue(new Date("2023-01-15"))
+ * // Returns: <date>2023-01-15T00:00:00.000Z</date>
  * ```
  *
- * ## Error Handling:
- * - If the provided `value` is of a type that cannot be encoded (i.e., anything other than string, number, boolean,
- *   buffer, array, object, or Date), an `XMLParsingError` is thrown:
- *   ```ts
- *   throw new XMLParsingError(`Unsupported data type: ${ typeof value }`);
- *   ```
- *
- * ## Notes:
- * - The function recursively encodes arrays and objects, ensuring nested structures are properly serialized into the
- *   appropriate tags.
- * - For objects, keys are encoded using the `<key>` tag, while values are recursively encoded using the appropriate
- *   tags based on their type.
- *
- * @param value - The value to be encoded into a plist-compatible XML-like string.
- * @returns A string representing the encoded plist value with appropriate tags.
- * @throws {XMLParsingError} Throws an error if the value is of an unsupported type.
+ * @since 1.0.1
  */
 
 export function encodeValue(value: unknown): string {
@@ -104,45 +93,39 @@ export function encodeValue(value: unknown): string {
 }
 
 /**
- * The `encodeTag` function generates an XML-like string representation of a given tag and its associated value.
- * It handles boolean values with specific tags (`<true/>` or `<false/>`) and uses generic tags for all other types.
+ * Creates an XML tag string with the specified value
  *
- * - **Input**:
- *   - `tag`: A string representing the tag name to be used for the XML-like encoding.
- *   - `value`: The value to be wrapped within the provided tag. It can be of any type:
- *     - `boolean`: Encodes as `<true/>` or `<false/>` without including the tag name.
- *     - Other types: Encodes the value inside the given tag, e.g., `<tag>value</tag>`.
+ * @param tag - The XML tag name to use
+ * @param value - The value to be enclosed in the tag
+ * @returns A formatted XML tag string
  *
- * - **Output**:
- *   - A string representing the XML-like encoded value with the specified tag.
+ * @remarks
+ * This function generates XML-formatted strings for plist serialization.
+ * It handles several special cases:
  *
- * ## Example:
+ * - Boolean values are encoded as self-closing `<true/>` or `<false/>` tags,
+ *   ignoring the provided tag name
+ * - Empty strings are encoded as self-closing tags: `<tag/>`
+ * - All other values are encoded with opening and closing tags: `<tag>value</tag>`
+ *
+ * The function does not perform XML character escaping on the value - any necessary
+ * escaping should be done before calling this function.
+ *
+ * @example
  * ```ts
- * const tag = 'string';
- * const value = 'Hello, World!';
- * console.log(encodeTag(tag, value)); // <string>Hello, World!</string>
+ * // Regular tag with content
+ * encodeTag('string', 'Hello')     // Returns: <string>Hello</string>
+ * encodeTag('integer', 42)         // Returns: <integer>42</integer>
  *
- * const boolTag = 'isActive';
- * const boolValue = true;
- * console.log(encodeTag(boolTag, boolValue)); // <true/>
+ * // Empty string results in self-closing tag
+ * encodeTag('string', '')          // Returns: <string/>
  *
- * const customTag = 'number';
- * const customValue = 42;
- * console.log(encodeTag(customTag, customValue)); // <number>42</number>
+ * // Boolean values have special handling
+ * encodeTag('anything', true)      // Returns: <true/>
+ * encodeTag('ignored', false)      // Returns: <false/>
  * ```
  *
- * ## Error Handling:
- * - This function does not validate the provided `tag` or `value`. It assumes the input is correctly formatted and that
- *   `value` is a type that can be safely converted to a string. Unexpected behavior might occur if `value` is an object
- *   or a symbol without proper string serialization.
- *
- * ## Notes:
- * - Boolean values are treated as a special case, encoded as `<true/>` or `<false/>`, ignoring the provided tag name.
- * - For all other types, the function wraps the value inside the specified tag, ensuring a simple XML-like structure.
- *
- * @param tag - The tag name to use for encoding the value.
- * @param value - The value to be encoded within the specified tag. Booleans are treated as special cases.
- * @returns A string representing the XML-like encoded value with the specified tag.
+ * @since 1.0.1
  */
 
 export function encodeTag(tag: string, value: string | number | boolean): string {
@@ -153,51 +136,46 @@ export function encodeTag(tag: string, value: string | number | boolean): string
 }
 
 /**
- * The `decodeClosingTag` function searches for the closing tag that matches the provided start tag in the input
- * string using a regular expression. It checks for the existence and validity of the end tag and ensures that the
- * closing tag matches the provided `startTag`. If the end tag is missing, invalid, or mismatched, the function throws
- * an `XMLParsingError`.
+ * Locates and validates the closing XML tag that matches a specified start tag
  *
- * The function returns an object of type `RawNodeInterface` containing details about the closing tag, including
- * the tag name, raw-matched string, index, and the current offset where the search began.
+ * @param data - The XML string to search through
+ * @param regex - Regular expression pattern with capturing groups for the end tag
+ * @param startTag - The opening tag name to match against
+ * @returns Information about the closing tag including position and raw text
  *
- * - **Input**:
- *   - `data`: The string to search through for the closing tag.
- *   - `regex`: A regular expression used to locate the end tag.
- *   - `startTag`: The name of the tag whose closing counterpart is being searched for.
+ * @throws XMLParsingError - When end tag is missing or doesn't match the start tag
  *
- * - **Output**:
- *   - An object of type `RawNodeInterface` with the following properties:
- *     - `tag`: The name of the tag.
- *     - `raw`: The raw matched string for the closing tag.
- *     - `index`: The index where the closing tag was found in the string.
- *     - `offset`: The offset where the search began in the string.
+ * @remarks
+ * This function searches through the provided XML string to find the closing tag
+ * that corresponds to a specific opening tag. It uses a regular expression with
+ * capturing groups to extract information about the closing tag.
  *
- * ## Example:
+ * The function performs two key validations:
+ * 1. It verifies that a closing tag exists in the data
+ * 2. It confirms that the closing tag name matches the provided start tag name
+ *
+ * The function returns a `RawNodeInterface` object containing:
+ * - `tag`: The name of the matched tag
+ * - `raw`: The full raw text of the closing tag
+ * - `index`: The position where the closing tag was found
+ * - `offset`: The position where the search began
+ *
+ * @example
  * ```ts
- * const data = '<key>name</key><value>John</value>';
- * const regex = /<\/(\w+)>/g;
- * const result = decodeClosingTag(data, regex, 'key');
- * console.log(result.tag); // 'key'
- * console.log(result.raw); // '</key>'
- * console.log(result.index); // The index where '</key>' is found
+ * // Given XML: "<string>Hello</string>World"
+ * const regex = /<\/([^>]+)>/g;
+ * regex.lastIndex = 13; // Position after "<string>Hello"
+ *
+ * try {
+ *   const result = decodeClosingTag(xml, regex, "string");
+ *   console.log(result);
+ *   // Output: { tag: "string", raw: "</string>", index: 18, offset: 13 }
+ * } catch (error) {
+ *   // Handle missing or mismatched tags
+ * }
  * ```
  *
- * ## Error Handling:
- * - If the end tag is missing or invalid, an `XMLParsingError` is thrown with the message:
- *   ```ts
- *   throw new XMLParsingError(`Missing or invalid end tag of <${startTag}> tag`);
- *   ```
- * - If the end tag does not match the expected `startTag`, an `XMLParsingError` is thrown with the message:
- *   ```ts
- *   throw new XMLParsingError(`Mismatched tags start <${startTag}> and end tags <${nextMatch[1]}>`);
- *   ```
- *
- * @param data - The string containing the XML data.
- * @param regex - The regular expression used to locate the end tag.
- * @param startTag - The name of the start tag to match with the closing tag.
- * @returns An object of type `RawNodeInterface` containing information about the closing tag.
- * @throws {XMLParsingError} Throws an `XMLParsingError` if the end tag is missing, invalid, or mismatched.
+ * @since 1.0.1
  */
 
 export function decodeClosingTag(data: string, regex: RegExp, startTag: string): RawNodeInterface {
@@ -218,38 +196,38 @@ export function decodeClosingTag(data: string, regex: RegExp, startTag: string):
 }
 
 /**
- * The `decodeContentOfTag` function extracts a portion of the input string between the specified `startOffset`
- * and `endOffset`, trims any leading or trailing whitespace, and decodes any escaped characters within the extracted
- * content using the `decodeEscaping` function.
+ * Extracts and decodes XML content between specified positions in a string
  *
- * This function is useful for extracting and decoding content between specific indices, such as the content within
- * tags in XML or plist data, while handling HTML/XML escape sequences.
+ * @param data - The source string containing XML content
+ * @param startOffset - The starting position from which to extract content
+ * @param endOffset - The ending position where extraction should stop
+ * @returns The extracted content with whitespace trimmed and XML entities decoded
  *
- * - **Input**:
- *   - `data`: The string containing the content to extract and decode.
- *   - `startOffset`: The starting index in the string from where the extraction should begin.
- *   - `endOffset`: The ending index in the string where the extraction should end.
+ * @remarks
+ * This utility function extracts text between the specified offsets in an XML string,
+ * trims any leading or trailing whitespace, and decodes XML entities and escape
+ * sequences using the `decodeEscaping` function.
  *
- * - **Output**:
- *   - A string containing the decoded content between the `startOffset` and `endOffset`, with any escaped characters decoded.
+ * The function is commonly used to extract the content between XML tags after
+ * their positions have been identified. For example, to get the text between
+ * `<string>` and `</string>` tags.
  *
- * ## Example:
+ * If the provided offsets don't represent a valid range (e.g., startOffset \> endOffset),
+ * an empty string will be returned.
+ *
+ * @example
  * ```ts
- * const rawData = '<key>name</key>';
- * const content = decodeContentOfTag(rawData, 5, 9);
- * console.log(content); // 'name'
+ * // Given XML: "<string>Hello &amp; World</string>"
+ * const content = decodeContentOfTag(xml, 8, 20);
+ * console.log(content); // "Hello & World"
+ *
+ * // Extract and decode a key from a plist file
+ * const xml = "<key>app_version</key>";
+ * const content = decodeContentOfTag(xml, 5, 16);
+ * console.log(content); // "app_version"
  * ```
  *
- * ## Error Handling:
- * - If the `data` is invalid or the `startOffset` and `endOffset` do not point to a valid content range, the function will
- *   return an empty string.
- * - If the `decodeEscaping` function encounters invalid or unmatched escape sequences, the behavior is undefined, but it will
- *   attempt to decode the content as best as possible.
- *
- * @param data - The string containing the content to extract and decode.
- * @param startOffset - The starting index for the content extraction.
- * @param endOffset - The ending index for the content extraction.
- * @returns A string containing the decoded content, or an empty string if no content is found.
+ * @since 1.0.1
  */
 
 export function decodeContentOfTag(data: string, startOffset: number, endOffset: number): string {
@@ -257,55 +235,47 @@ export function decodeContentOfTag(data: string, startOffset: number, endOffset:
 }
 
 /**
- * The `decodeTag` function extracts and decodes the content between a given start tag and its corresponding end tag
- * from the provided string.
- * It first calls the `decodeClosingTag` function to locate the closing tag (if applicable),
- * and then extracts the content between the start and end tags using `decodeContentOfTag`.
- * The extracted content is
- * returned as a decoded string, with any escape sequences handled by `decodeEscaping`.
+ * Extracts and decodes content between matching XML tags
  *
- * If the `selfClose` parameter is set to `true`, the function bypasses the decoding process and immediately returns
- * an empty string, as no content is expected between self-closing tags.
+ * @param data - The XML string to parse
+ * @param regex - Regular expression with capturing groups to locate XML tags
+ * @param startTag - The name of the opening tag to match
+ * @param selfClose - Whether the tag is self-closing (defaults to false)
+ * @returns The decoded content between the tags, or empty string for self-closing tags
+ * @throws XMLParsingError - When the closing tag is missing or doesn't match the start tag
  *
- * This function is useful for extracting and decoding the content within specific tags, such as XML or plist tags,
- * while handling escape sequences.
+ * @remarks
+ * This function handles the extraction of content between matching XML tags. It works
+ * in two modes:
  *
- * - **Input**:
- *   - `data`: A string containing the data to extract and decode.
- *   - `regex`: A regular expression used to locate the end tag.
- *   - `startTag`: The name of the start tag to match with the closing tag.
- *   - `selfClose`: A boolean indicating whether the tag is self-closing.
- *   Defaults to `false`.
+ * 1. For self-closing tags (when `selfClose` is true), it immediately returns an empty
+ *    string since self-closing tags contain no content.
  *
- * - **Output**:
- *   - A string containing the decoded content between the start and end tags,
- *   or an empty string for self-closing tags.
+ * 2. For regular tags, it:
+ *    - Locates the matching closing tag using `decodeClosingTag`
+ *    - Extracts the content between the tags using `decodeContentOfTag`
+ *    - Returns the decoded content with XML entities properly converted
  *
- * ## Example:
+ * The `regex` parameter should be a regular expression with capturing groups that
+ * can match closing tags. Typically, this regex would be initialized before calling
+ * this function and its `lastIndex` property would point to the position just after
+ * the opening tag.
+ *
+ * @example
  * ```ts
- * const data = '<key>name</key><value>John</value>';
- * const regex = /<\/?(\w+)>/g;
- * const result = decodeTag(data, regex, regex.exec(data)![1]);
- * console.log(result); // 'name'
+ * // Regular tag with content
+ * const xml = "<string>Hello &amp; World</string>";
+ * const regex = /<\/([^>]+)>/g;
+ * regex.lastIndex = 8; // Position after "<string>"
+ * const content = decodeTag(xml, regex, "string");
+ * console.log(content); // "Hello & World"
  *
- * const selfClosingData = '<input />';
- * const resultSelfClose = decodeTag(selfClosingData, regex, 'input', true);
- * console.log(resultSelfClose); // ''
+ * // Self-closing tag
+ * const emptyCont = decodeTag("<element/>", regex, "element", true);
+ * console.log(emptyCont); // ""
  * ```
  *
- * ## Error Handling:
- * - If the `selfClose` parameter is `true`, no decoding or extraction occurs.
- * - If the end tag is missing, invalid, or mismatched, an `XMLParsingError` will be thrown by the `decodeClosingTag` function.
- * - If the content between the start and end tags cannot be extracted, the function will return an empty string.
- * - The function assumes that the content between the tags is valid and properly escaped. If any issues occur during the
- *   decoding process, the behavior is undefined.
- *
- * @param data - The string containing the data to decode.
- * @param regex - The regular expression used to locate the end tag.
- * @param startTag - The name of the start tag to match with the closing tag.
- * @param selfClose - A boolean indicating whether the tag is self-closing. Defaults to `false`.
- * @returns A string containing the decoded content between the start and end tags, or an empty string for self-closing tags.
- * @throws {XMLParsingError} Throws an `XMLParsingError` if the end tag is missing, invalid, or mismatched.
+ * @since 1.0.1
  */
 
 export function decodeTag(data: string, regex: RegExp, startTag: string, selfClose: boolean = false): string {
@@ -316,39 +286,44 @@ export function decodeTag(data: string, regex: RegExp, startTag: string, selfClo
 }
 
 /**
- * The `decodeDate` function attempts to parse the provided `content` string into a `Date` object. If the parsing is
- * unsuccessful (i.e., the content cannot be converted to a valid date), an `XMLParsingError` is thrown. The function
- * also includes the `tagName` in the error message for better context.
+ * Parses a string into a Date object, validating the result
  *
- * This function is useful for extracting date values from XML or plist data, ensuring that the content can be correctly
- * interpreted as a `Date` object.
+ * @param content - The date string to parse
+ * @param tagName - The XML tag name (used in error messages)
+ * @returns A valid Date object from the parsed string
+ * @throws XMLParsingError - When the string cannot be parsed into a valid date
  *
- * - **Input**:
- *   - `content`: A string representing the date to be parsed.
- *   - `tagName`: The name of the tag from which the date is being extracted, used in the error message for context.
+ * @remarks
+ * This function converts a string representation of a date (typically extracted
+ * from an XML document) into a JavaScript Date object. It performs validation to
+ * ensure the parsed result is a valid date.
  *
- * - **Output**:
- *   - A `Date` object representing the parsed date.
+ * The function expects date strings in formats acceptable to the JavaScript Date
+ * constructor, such as ISO 8601 format (e.g., "2023-01-15T12:30:00Z").
  *
- * ## Example:
+ * If parsing fails, an XMLParsingError is thrown that includes both the tag name
+ * and the invalid content in the error message to help with debugging.
+ *
+ * @example
  * ```ts
- * const dateContent = '2024-12-14T00:00:00Z';
- * const tagName = 'dateCreated';
- * const parsedDate = decodeDate(dateContent, tagName);
- * console.log(parsedDate); // 2024-12-14T00:00:00.000Z
+ * // Parse a valid date
+ * try {
+ *   const date = decodeDate("2023-01-15T12:30:00Z", "creationDate");
+ *   console.log(date.toISOString()); // "2023-01-15T12:30:00.000Z"
+ * } catch (error) {
+ *   // Handle error
+ * }
+ *
+ * // Invalid date will throw an error
+ * try {
+ *   const date = decodeDate("not-a-date", "modifiedDate");
+ * } catch (error) {
+ *   console.error(error.message);
+ *   // "Invalid date data for tag "modifiedDate": "not-a-date" cannot be parsed as a valid date."
+ * }
  * ```
  *
- * ## Error Handling:
- * - If the `content` cannot be parsed into a valid `Date`, an `XMLParsingError` is thrown with a message indicating
- *   the invalid date and the tag name:
- *   ```ts
- *   throw new XMLParsingError(`Invalid date data for tag "${tagName}": "${content}" cannot be parsed as a valid date.`);
- *   ```
- *
- * @param content - The string containing the date to be parsed.
- * @param tagName - The name of the tag for context in the error message.
- * @returns A `Date` object representing the parsed date.
- * @throws {XMLParsingError} Throws an `XMLParsingError` if the `content` cannot be parsed into a valid `Date`.
+ * @since 1.0.1
  */
 
 export function decodeDate(content: string, tagName: string): Date {
@@ -360,38 +335,54 @@ export function decodeDate(content: string, tagName: string): Date {
 }
 
 /**
- * The `decodeNumber` function attempts to convert the provided `content` string into a number. If the conversion
- * is unsuccessful (i.e., the content cannot be converted to a valid number or is an empty string), an `XMLParsingError`
- * is thrown. The function includes the `tagName` in the error message for better context.
+ * Converts a string to a number with validation
  *
- * This function is useful for extracting numerical values from XML or plist data, ensuring that the content can be
- * correctly interpreted as a number.
+ * @param content - The numeric string to convert
+ * @param tagName - The XML tag name (used in error messages)
+ * @returns The parsed number value
+ * @throws XMLParsingError - When the string cannot be converted to a valid number
  *
- * - **Input**:
- *   - `content`: A string representing the number to be converted.
- *   - `tagName`: The name of the tag from which the number is being extracted, used in the error message for context.
+ * @remarks
+ * This function safely converts a string representation of a number (typically
+ * extracted from an XML document) into a JavaScript number. It performs validation
+ * to ensure the parsed result is a valid number and not NaN.
  *
- * - **Output**:
- *   - A `number` representing the converted value from the `content` string.
+ * The function rejects both NaN values and empty strings as invalid number
+ * representations. It throws a descriptive error that includes both the tag name
+ * and the problematic content to aid in debugging.
  *
- * ## Example:
+ * Common use cases include parsing numeric values from XML elements such as:
+ * - <integer>42</integer>
+ * - <real>3.14159</real>
+ *
+ * @example
  * ```ts
- * const numberContent = '42';
- * const tagName = 'age';
- * const parsedNumber = decodeNumber(numberContent, tagName);
- * console.log(parsedNumber); // 42
+ * // Parse a valid integer
+ * try {
+ *   const value = decodeNumber("42", "count");
+ *   console.log(value); // 42
+ * } catch (error) {
+ *   // Handle error
+ * }
+ *
+ * // Parse a valid floating-point number
+ * try {
+ *   const value = decodeNumber("3.14159", "pi");
+ *   console.log(value); // 3.14159
+ * } catch (error) {
+ *   // Handle error
+ * }
+ *
+ * // Invalid number will throw an error
+ * try {
+ *   const value = decodeNumber("not-a-number", "quantity");
+ * } catch (error) {
+ *   console.error(error.message);
+ *   // "Invalid number data for tag "quantity": "not-a-number" cannot be converted to a valid number."
+ * }
  * ```
  *
- * ## Error Handling:
- * - If the `content` cannot be converted to a valid number or is an empty string, an `XMLParsingError` is thrown with a message indicating the invalid data and the tag name:
- *   ```ts
- *   throw new XMLParsingError(`Invalid number data for tag "${tagName}": "${content}" cannot be converted to a valid number.`);
- *   ```
- *
- * @param content - The string containing the number to be converted.
- * @param tagName - The name of the tag for context in the error message.
- * @returns A `number` representing the converted value.
- * @throws {XMLParsingError} Throws an `XMLParsingError` if the `content` cannot be converted to a valid number.
+ * @since 1.0.1
  */
 
 export function decodeNumber(content: string, tagName: string): number {
@@ -403,48 +394,65 @@ export function decodeNumber(content: string, tagName: string): number {
 }
 
 /**
- * The `decodePrimitive` function decodes a primitive value from its string representation based on the provided tag name.
- * It supports a variety of primitive types, including strings, numbers, booleans, dates, and binary data. The function
- * uses the tag name to determine the type of the content and applies the appropriate decoding logic.
+ * Converts XML primitive values to their corresponding JavaScript types
  *
- * - **Supported Tags**:
- *   - `'string'`: Returns the content as a string.
- *   - `'integer'` or `'real'`: Converts the content to a number using `decodeNumber`.
- *   - `'true'`: Returns the boolean value `true`.
- *   - `'false'`: Returns the boolean value `false`.
- *   - `'date'`: Converts the content to a `Date` object using `decodeDate`.
- *   - `'data'`: Decodes the content as base64-encoded binary data into a `Buffer`.
+ * @param content - The string content to decode
+ * @param tagName - The XML tag name that determines the target type
+ * @returns The decoded value with the appropriate type
+ * @throws XMLParsingError - When the tag name is not a supported primitive type
  *
- * - **Input**:
- *   - `content`: The string content to decode.
- *   - `tagName`: The name of the tag that determines the type of the content.
+ * @remarks
+ * This function converts string content from XML elements into their corresponding
+ * JavaScript types based on the XML tag name. It handles all the primitive types
+ * found in property list (plist) and similar XML formats.
  *
- * - **Output**:
- *   - The decoded value, whose type depends on the tag:
- *     - `string` for `'string'`.
- *     - `number` for `'integer'` or `'real'`.
- *     - `boolean` for `'true'` or `'false'`.
- *     - `Date` for `'date'`.
- *     - `Buffer` for `'data'`.
+ * The function supports the following mappings:
+ * - `string` → String (unchanged)
+ * - `integer`, `real` → Number (parsed with validation)
+ * - `true` → Boolean true
+ * - `false` → Boolean false
+ * - `date` → Date object (parsed with validation)
+ * - `data` → Buffer (decoded from base64)
  *
- * ## Example:
+ * For numeric and date types, validation is performed to ensure the content
+ * can be properly converted. For data types, the content is expected to be
+ * base64-encoded and is decoded to a Buffer.
+ *
+ * @example
  * ```ts
- * console.log(decodePrimitive('42', 'integer')); // 42
- * console.log(decodePrimitive('true', 'true')); // true
- * console.log(decodePrimitive('2024-12-14T00:00:00Z', 'date')); // Date object
- * console.log(decodePrimitive('SGVsbG8gd29ybGQ=', 'data')); // Buffer containing "Hello world"
+ * // String
+ * const str = decodePrimitive("Hello world", "string");
+ * console.log(str); // "Hello world"
+ *
+ * // Number (integer)
+ * const int = decodePrimitive("42", "integer");
+ * console.log(int); // 42
+ *
+ * // Number (real/float)
+ * const float = decodePrimitive("3.14159", "real");
+ * console.log(float); // 3.14159
+ *
+ * // Boolean
+ * const bool = decodePrimitive("", "true");
+ * console.log(bool); // true
+ *
+ * // Date
+ * const date = decodePrimitive("2023-01-15T12:30:00Z", "date");
+ * console.log(date instanceof Date); // true
+ *
+ * // Binary data
+ * const data = decodePrimitive("SGVsbG8gd29ybGQ=", "data");
+ * console.log(data.toString()); // "Hello world"
+ *
+ * // Unsupported tag throws error
+ * try {
+ *   decodePrimitive("content", "unsupported");
+ * } catch (error) {
+ *   console.error(error.message); // "Unsupported tag: <unsupported>"
+ * }
  * ```
  *
- * ## Error Handling:
- * - If the `tagName` is unsupported, an `Error` is thrown with a message indicating the unsupported tag:
- *   ```ts
- *   throw new Error(`Unsupported tag: <${tagName}>`);
- *   ```
- *
- * @param content - The string content to decode.
- * @param tagName - The name of the tag indicating the type of the content.
- * @returns The decoded value, with its type determined by the tag name.
- * @throws {Error} Throws an `Error` if the tag name is unsupported.
+ * @since 1.0.1
  */
 
 export function decodePrimitive(content: string, tagName: string): unknown {

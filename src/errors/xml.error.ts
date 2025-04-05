@@ -5,41 +5,40 @@
 import { PlistError } from './base.error';
 
 /**
- * The `XMLParsingError` class extends the `PlistError` class to represent errors specific to XML parsing issues
- * encountered within plist (Property List) files. This error type is useful for handling and distinguishing errors
- * related to XML parsing from other plist-related errors.
+ * Custom error class for XML parsing errors in Property List files
  *
- * The error class customizes the error name to `'XMLParsingError'` and maintains the stack trace
- * for better debugging and error handling. It also allows the inclusion of additional context through the `details`
- * property, which can provide more specific information about the nature of the XML parsing failure.
+ * @param message - The error message describing the XML parsing issue
+ * @param details - Optional additional information about the parsing error
  *
- * - **Input**:
- *   - `message`: A string representing the error message that provides details about the specific XML parsing error.
- *   - `details` (optional): A string that can provide additional context about the error (e.g., the problematic XML content or tag).
+ * @remarks
+ * This class extends the PlistError class to provide specific error handling
+ * for XML parsing operations in plist files. It includes a custom error name
+ * ('XMLParsingError') and captures the stack trace for improved debugging.
  *
- * - **Output**:
- *   - An instance of `XMLParsingError`, which contains the message, name (`XMLParsingError`), stack trace, and optional details.
+ * If details are provided, they are appended to the main error message with
+ * a separator for more comprehensive error reporting. This helps identify
+ * the exact nature of XML parsing failures, such as malformed elements or
+ * missing attributes.
  *
- * ## Example:
+ * @example
  * ```ts
  * try {
- *   throw new XMLParsingError('Failed to parse XML data in the plist file.', 'The root tag was missing.');
+ *   // Attempt to parse XML content
+ *   if (!xmlContent.includes('<plist')) {
+ *     throw new XMLParsingError(
+ *       'Invalid plist XML format',
+ *       'Missing plist root element'
+ *     );
+ *   }
  * } catch (error) {
- *   console.log(error.name);    // 'XMLParsingError'
- *   console.log(error.message); // 'Failed to parse XML data in the plist file. - The root tag was missing.'
- *   console.log(error.stack);   // Stack trace of the error
+ *   if (error instanceof XMLParsingError) {
+ *     console.error(error.message);
+ *     // Output: "Invalid plist XML format - Missing plist root element"
+ *   }
  * }
  * ```
  *
- * ## Error Handling:
- * - The class relies on the base `PlistError` class for error message handling and stack trace capturing.
- * - If the `message` is not provided, the `Error` constructor's default behavior will apply, and an empty message will
- *   be assigned.
- * - If `details` is provided, it is appended to the message for better error context.
- *
- * @param message - The error message describing the XML parsing issue encountered.
- * @param details - (Optional) A string with additional context about the error (e.g., specific content or tag that caused the error).
- * @returns An `XMLParsingError` instance with a customized error name, message, and stack trace.
+ * @since 1.0.1
  */
 
 export class XMLParsingError extends PlistError {

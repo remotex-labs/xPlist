@@ -1,133 +1,122 @@
-# Property List Encoder/Decoder (xPlist)
-This project provides functionality to encode and decode Property List (plist) data in both XML and binary formats. 
-Property Lists (plists) are commonly used in macOS and iOS applications for storing serialized data. 
-This library enables easy conversion between these formats, supporting a variety of data types like strings, numbers, dates, buffers, arrays, set, and dictionaries.
+# Property List Encoder/Decoder (@remotex-labs/xPlist)
+A lightweight TypeScript/JavaScript library for encoding and decoding property lists (plist) in both XML and binary formats. Property Lists are commonly used in macOS and iOS applications for storing serialized data and configuration files.
+[](https://www.npmjs.com/package/@remotex-labs/xplist)[](https://opensource.org/licenses/MPL-2.0)[](https://www.npmjs.com/package/@remotex-labs/xplist)
 
 ## Features
-- **Encoding**:
-    - Encode plist data to both **XML** and **binary** formats.
-    - Supports encoding complex data types like objects, arrays, sets, and buffers.
-    - Handles various types like strings, numbers, booleans, dates, and `UID`s.
-
-- **Decoding**:
-    - Decode plist data from **XML** and **binary** formats back into JavaScript objects.
-    - Supports nested structures such as dictionaries, arrays, and sets.
-
-## Table of Contents
-- [Installation](#installation)
-- [Usage](#usage)
-    - [Encode to XML](#encode-to-xml)
-    - [Encode to Binary](#encode-to-binary)
-    - [Decode from XML](#decode-from-xml)
-    - [Decode from Binary](#decode-from-binary)
-- [Data Types](#data-types)
-
+- **Universal Formats**: Encode and decode between JavaScript objects and both XML and binary plist formats
+- **Type Support**: Handle a rich variety of data types including strings, numbers, booleans, dates, buffers, arrays, sets, and dictionaries
+- **Performance**: Optimized for efficient processing of large property list files
+- **Cross-Platform**: Works in Node.js (>=18) environments
+- **ESM & CJS Support**: Compatible with both module systems
 
 ## Installation
-You can install the package via npm or yarn:
-```shell
+Install via npm:
+``` bash
 npm install @remotex-labs/xplist
 ```
-
-or
-
-```shell
+Or using yarn:
+``` bash
 yarn add @remotex-labs/xplist
 ```
 
 ## Usage
-### Encode to XML
-
-To encode a JavaScript object to XML format:
-```ts
+### Encode to XML Format
+``` typescript
 import { encodePlist } from '@remotex-labs/xplist';
 
-const myObject = {
-    name: 'John',
-    age: 30,
-    isActive: true,
-    createdAt: new Date()
+const data = {
+  name: 'John',
+  age: 30,
+  isActive: true,
+  createdAt: new Date(),
+  scores: [95, 87, 92],
+  metadata: {
+    roles: ['admin', 'user'],
+    settings: {
+      darkMode: true
+    }
+  }
 };
 
-const xml = encodePlist(myObject);
-console.log(xml);
-
-/**
- * <?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>name</key><string>John</string><key>age</key><integer>30</integer><key>isActive</key><true/><key>createdAt</key><date>2024-12-18T00:53:42.449Z</date></dict></plist>
- */
-
+const xmlString = encodePlist(data);
+console.log(xmlString);
 ```
 
-### Encode to Binary
-
-To encode a JavaScript object to binary format:
-```ts
+### Encode to Binary Format
+``` typescript
 import { encodeBinary } from '@remotex-labs/xplist';
 
-const myObject = {
-    name: 'John',
-    age: 30,
-    isActive: true,
-    createdAt: new Date()
+const data = {
+  name: 'John',
+  age: 30,
+  isActive: true,
+  createdAt: new Date()
 };
 
-const binaryData = encodeBinary(myObject);
-console.log(binaryData);
-
-// 62706c6973743030d40103050702040608546e616d65544a6f686e53616765101e58697341637469766509596372656174656441743341c6892a6cc581060811161b1f212a2b35000000000000010100000000000000090000000000000000000000000000003e
+const binaryData = encodeBinary(data);
+// Output is a Buffer containing the binary plist format
 ```
 
-### Decode from XML
+### Decode from XML Format
+``` typescript
+import { decodePlist } from '@remotex-labs/xplist';
 
-To decode an XML plist back into a JavaScript object:
-```ts
-import { decodedObject } from '@remotex-labs/xplist';
-
-const xmlData = `<?xml version="1.0" encoding="UTF-8"?>
+const xmlString = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
-    <dict>
-        <key>name</key>
-        <string>John</string>
-        <key>age</key>
-        <integer>30</integer>
-        <key>isActive</key>
-        <true/>
-        <key>createdAt</key>
-        <date>2024-12-18T10:00:00Z</date>
-    </dict>
+  <dict>
+    <key>name</key>
+    <string>John</string>
+    <key>age</key>
+    <integer>30</integer>
+    <key>isActive</key>
+    <true/>
+    <key>createdAt</key>
+    <date>2024-07-15T12:00:00Z</date>
+  </dict>
 </plist>`;
 
-const decodedObject = decodePlist(xmlData);
-console.log(decodedObject);
+const data = decodePlist(xmlString);
+console.log(data);
+// { name: 'John', age: 30, isActive: true, createdAt: Date(2024-07-15T12:00:00.000Z) }
 ```
 
-### Decode from Binary
-
-To decode a binary plist back into a JavaScript object:
-
-```ts
+### Decode from Binary Format
+``` typescript
 import { decodeBinary } from '@remotex-labs/xplist';
 
-const binaryData = Buffer.from('62706c6973743030d40103050702040608546e616d65544a6f686e53616765101e58697341637469766509596372656174656441743341c6892a6cc581060811161b1f212a2b35000000000000010100000000000000090000000000000000000000000000003e', 'hex');
-const decodedObject = decodeBinary(binaryData);
-console.log(decodedObject);
-
+// Binary data as a Buffer or Uint8Array
+const binaryData = Buffer.from(/* binary data here */);
+const data = decodeBinary(binaryData);
+console.log(data);
 ```
 
-## Data Types
-The library supports encoding and decoding of a variety of common data types:
+## Supported Data Types
+This library handles a wide range of data types for both encoding and decoding:
 
-    - String (string)
-    - Number (number)
-    - BigInt (bigint)
-    - Boolean (true, false)
-    - Date (Date)
-    - Buffer (Buffer)
-    - Array (Array<unknown>)
-    - Set (Set<unknown>)
-    - Object ({ [key: string]: unknown })
+| JavaScript Type | XML Plist               | Binary Plist    |
+| --- |-------------------------|-----------------|
+| String | `<string>`              | String          |
+| Number | `<integer>` or `<real>` | Integer or Real |
+| BigInt | `<integer>`             | Integer         |
+| Boolean | `<true/>` or `<false/>` | Boolean         |
+| Date | `<date>`                | Date            |
+| Buffer | `<data>`                | Data            |
+| Array | `<array>`               | Array           |
+| Set | `<array>`               | Set             |
+| Object | `<dict>`                | Dictionary      |
+| null/undefined | Not supported           | Not supported   |
+Additionally, binary plists support:
+- UID types (represented as Buffer)
+- Binary data (represented as Buffer)
 
-For binary encoding, the following special types are supported:
+## Contributing
+Contributions are welcome! Please feel free to submit a Pull Request.
 
-    - UID (Buffer)
-    - Binary Data (Buffer)
+## License
+This project is licensed under the Mozilla Public License Version 2.0 - see the LICENSE file for details.
+
+## Links
+- [GitHub Repository](https://github.com/remotex-lab/xPlist)
+- [Issue Tracker](https://github.com/remotex-lab/xPlist/issues)
+- [npm Package](https://www.npmjs.com/package/@remotex-labs/xplist)

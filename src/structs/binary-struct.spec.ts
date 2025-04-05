@@ -81,13 +81,13 @@ describe('unpackDataHeader', () => {
 
 describe('packOffsetTable', () => {
     test.each([
-        [ [ 0 ], Buffer.from([ 0 ]) ],                      // Single offset: 0 -> Buffer: [0]
-        [ [ 1 ], Buffer.from([ 1 ]) ],                      // Single offset: 1 -> Buffer: [1]
-        [ [ 255 ], Buffer.from([ 255 ]) ],                  // Single offset: 255 -> Buffer: [255]
-        [ [ 0, 1 ], Buffer.from([ 0, 1 ]) ],                // Two offsets: 0, 1 -> Buffer: [0, 1]
-        [ [ 1, 255 ], Buffer.from([ 1, 255 ]) ],            // Two offsets: 1, 255 -> Buffer: [1, 255]
-        [ [ 1, 256 ], Buffer.from([ 0, 1, 1, 0 ]) ],        // Two offsets: 1, 256 -> Buffer: [0, 1, 1, 0]
-        [ [ 1000n, 1000000n ], Buffer.from([ 0, 0, 3, 232, 0, 15, 66, 64 ]) ] // BigInt offsets: 1000n, 1000000n -> Buffer: [0, 0, 3, 232, 0, 15, 66, 64]
+        [[ 0 ], Buffer.from([ 0 ]) ],                      // Single offset: 0 -> Buffer: [0]
+        [[ 1 ], Buffer.from([ 1 ]) ],                      // Single offset: 1 -> Buffer: [1]
+        [[ 255 ], Buffer.from([ 255 ]) ],                  // Single offset: 255 -> Buffer: [255]
+        [[ 0, 1 ], Buffer.from([ 0, 1 ]) ],                // Two offsets: 0, 1 -> Buffer: [0, 1]
+        [[ 1, 255 ], Buffer.from([ 1, 255 ]) ],            // Two offsets: 1, 255 -> Buffer: [1, 255]
+        [[ 1, 256 ], Buffer.from([ 0, 1, 1, 0 ]) ],        // Two offsets: 1, 256 -> Buffer: [0, 1, 1, 0]
+        [[ 1000n, 1000000n ], Buffer.from([ 0, 0, 3, 232, 0, 15, 66, 64 ]) ] // BigInt offsets: 1000n, 1000000n -> Buffer: [0, 0, 3, 232, 0, 15, 66, 64]
     ])(
         'should correctly pack offsets=%p into a buffer',
         (offsets, expectedBuffer) => {

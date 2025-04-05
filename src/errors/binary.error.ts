@@ -5,37 +5,37 @@
 import { PlistError } from './base.error';
 
 /**
- * The `BinaryParsingError` class extends the `PlistError` class and represents an error related to binary data parsing.
- * It provides additional context through an optional `details` field that can store further information about the error.
- * This class is designed to help identify and handle issues encountered while parsing binary data.
+ * Custom error class for binary data parsing errors
  *
- * The error message is constructed using the provided `message`, and if `details` are provided, it appends the details to the message.
- * This makes it easier to debug and trace errors related to binary parsing operations.
+ * @param message - The error message describing the binary parsing issue
+ * @param details - Optional additional information about the error
  *
- * - **Input**:
- *   - `message`: A string representing the error message that describes the error encountered during parsing.
- *   - `details`: (Optional) A string containing additional details about the error, which will be appended to the `message` if provided.
+ * @remarks
+ * This class extends the PlistError class to provide specific error handling
+ * for binary parsing operations. When thrown, it includes a custom error name
+ * ('BinaryParsingError') and captures the stack trace for improved debugging.
  *
- * - **Output**:
- *   - The instance of `BinaryParsingError` includes a `message` field, which is the error message (with optional details),
- *     a `name` field indicating the type of error, and a `stack` field providing the stack trace for debugging.
+ * If details are provided, they are appended to the main error message for
+ * more comprehensive error reporting. This is particularly useful for complex
+ * binary parsing operations where additional context can help with debugging.
  *
- * ## Example:
+ * @example
  * ```ts
  * try {
- *   // Simulate a binary parsing error
- *   throw new BinaryParsingError('Error parsing binary data', 'Invalid byte sequence encountered');
+ *   // Attempting to parse binary data
+ *   if (buffer.length < requiredLength) {
+ *     throw new BinaryParsingError(
+ *       'Insufficient buffer length',
+ *       `Expected at least ${requiredLength} bytes, got ${buffer.length}`
+ *     );
+ *   }
  * } catch (error) {
- *   console.error(error.message); // Output: Error parsing binary data - Invalid byte sequence encountered
+ *   console.error(error.message);
+ *   // Output: "Insufficient buffer length - Expected at least 8 bytes, got 4"
  * }
  * ```
  *
- * ## Error Handling:
- * - Inherits from the `PlistError` class, which handles general parsing errors.
- * - If `details` is provided, it is appended to the `message`, providing extra context for the error.
- *
- * @param message - The error message describing the binary parsing error.
- * @param details - (Optional) Additional details about the error that will be appended to the message.
+ * @since 1.0.1
  */
 
 export class BinaryParsingError extends PlistError {

@@ -1,5 +1,7 @@
 # Property List Encoder/Decoder (@remotex-labs/xPlist)
-A lightweight TypeScript/JavaScript library for encoding and decoding property lists (plist) in both XML and binary formats. Property Lists are commonly used in macOS and iOS applications for storing serialized data and configuration files.
+A lightweight TypeScript/JavaScript library for encoding and decoding property lists (plist) in both XML and binary formats. 
+Property Lists are commonly used in macOS and iOS applications for storing serialized data and configuration files.
+
 [](https://www.npmjs.com/package/@remotex-labs/xplist)[](https://opensource.org/licenses/MPL-2.0)[](https://www.npmjs.com/package/@remotex-labs/xplist)
 
 ## Features
@@ -8,6 +10,7 @@ A lightweight TypeScript/JavaScript library for encoding and decoding property l
 - **Performance**: Optimized for efficient processing of large property list files
 - **Cross-Platform**: Works in Node.js (>=18) environments
 - **ESM & CJS Support**: Compatible with both module systems
+- **Modular Imports**: Import only the functionality you need to reduce bundle size
 
 ## Installation
 Install via npm:
@@ -20,9 +23,25 @@ yarn add @remotex-labs/xplist
 ```
 
 ## Usage
+
+### Import Options
+You can import the entire library or just the specific format functionality you need:
+
+```typescript
+// Import everything
+import { encodePlist, decodePlist, encodeBinary, decodeBinary } from '@remotex-labs/xplist';
+
+// Import only XML plist functionality (5KB)
+import { encodePlist, decodePlist } from '@remotex-labs/xplist/xml';
+
+// Import only binary plist functionality (9KB)
+import { encodeBinary, decodeBinary, CreateUID } from '@remotex-labs/xplist/binary';
+```
+
 ### Encode to XML Format
 ``` typescript
-import { encodePlist } from '@remotex-labs/xplist';
+import { encodePlist } from '@remotex-labs/xplist/xml';
+// OR: import { encodePlist } from '@remotex-labs/xplist';
 
 const data = {
   name: 'John',
@@ -44,7 +63,8 @@ console.log(xmlString);
 
 ### Encode to Binary Format
 ``` typescript
-import { encodeBinary } from '@remotex-labs/xplist';
+import { encodeBinary } from '@remotex-labs/xplist/binary';
+// OR: import { encodeBinary } from '@remotex-labs/xplist';
 
 const data = {
   name: 'John',
@@ -59,7 +79,8 @@ const binaryData = encodeBinary(data);
 
 ### Decode from XML Format
 ``` typescript
-import { decodePlist } from '@remotex-labs/xplist';
+import { decodePlist } from '@remotex-labs/xplist/xml';
+// OR: import { decodePlist } from '@remotex-labs/xplist';
 
 const xmlString = `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -83,13 +104,22 @@ console.log(data);
 
 ### Decode from Binary Format
 ``` typescript
-import { decodeBinary } from '@remotex-labs/xplist';
+import { decodeBinary } from '@remotex-labs/xplist/binary';
+// OR: import { decodeBinary } from '@remotex-labs/xplist';
+
 
 // Binary data as a Buffer or Uint8Array
 const binaryData = Buffer.from(/* binary data here */);
 const data = decodeBinary(binaryData);
 console.log(data);
 ```
+
+## Bundle Size
+When using selective imports, you can significantly reduce your application's bundle size:
+- XML module: ~5KB
+- Binary module: ~8KB
+- Full package: ~13KB
+
 
 ## Supported Data Types
 This library handles a wide range of data types for both encoding and decoding:
@@ -106,6 +136,7 @@ This library handles a wide range of data types for both encoding and decoding:
 | Set | `<array>`               | Set             |
 | Object | `<dict>`                | Dictionary      |
 | null/undefined | Not supported           | Not supported   |
+
 Additionally, binary plists support:
 - UID types (represented as Buffer)
 - Binary data (represented as Buffer)

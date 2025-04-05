@@ -6,8 +6,8 @@ import type {
     HeaderInterface,
     TrailerInterface,
     TypeHeaderInterface
-} from '@structs/interfaces/binary.struct.interface';
-import type { IntegerByteLengthType } from '@components/interfaces/numbers.component.interface';
+} from '@structs/interfaces/binary-struct.interface';
+import type { IntegerByteLengthType } from '@components/interfaces/numbers-component.interface';
 
 /**
  * Imports

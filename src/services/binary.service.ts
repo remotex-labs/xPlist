@@ -5,9 +5,9 @@
 import type {
     DecodeObjectRefInterface,
     EncodeObjectRefInterface
-} from '@services/interfaces/binary.service.interface';
-import type { IntegerByteLengthType } from '@components/interfaces/numbers.component.interface';
-import type { PlistArrayType, PlistObjectType } from '@services/interfaces/plist.service.interface';
+} from '@services/interfaces/binary-service.interface';
+import type { IntegerByteLengthType } from '@components/interfaces/numbers-component.interface';
+import type { PlistArrayType, PlistObjectType } from '@services/interfaces/plist-service.interface';
 
 /**
  * Imports

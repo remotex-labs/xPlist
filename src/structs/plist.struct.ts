@@ -2,7 +2,7 @@
  * Import will remove at compile time
  */
 
-import type { RawNodeInterface } from '@structs/interfaces/plist.struct.interface';
+import type { RawNodeInterface } from '@structs/interfaces/plist-struct.interface';
 
 /**
  * Imports

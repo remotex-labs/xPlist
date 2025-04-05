@@ -7,7 +7,7 @@ import type {
     PlistObjectType,
     PlistObjectsType,
     PlistNodeInterfaces
-} from '@services/interfaces/plist.service.interface';
+} from '@services/interfaces/plist-service.interface';
 
 /**
  * Imports

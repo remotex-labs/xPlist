@@ -2,7 +2,7 @@
  * Import will remove at compile time
  */
 
-import type { IntegerByteLengthType } from '@components/interfaces/numbers.component.interface';
+import type { IntegerByteLengthType } from '@components/interfaces/numbers-component.interface';
 
 /**
  * Import

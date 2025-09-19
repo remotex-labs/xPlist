@@ -1,4 +1,4 @@
-# Property List Encoder/Decoder (@remotex-labs/xPlist)
+# xPlist
 
 [![npm version](https://img.shields.io/badge/Documentation-orange?logo=typescript&logoColor=f5f5f5)](https://remotex-labs.github.io/xPlist/)
 [![npm version](https://img.shields.io/npm/v/@remotex-labs/xplist.svg)](https://www.npmjs.com/package/@remotex-labs/xplist)

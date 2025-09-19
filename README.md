@@ -1,8 +1,13 @@
 # Property List Encoder/Decoder (@remotex-labs/xPlist)
+
+[![npm version](https://img.shields.io/badge/Documentation-orange?logo=typescript&logoColor=f5f5f5)](https://remotex-labs.github.io/xPlist/)
+[![npm version](https://img.shields.io/npm/v/@remotex-labs/xplist.svg)](https://www.npmjs.com/package/@remotex-labs/xplist)
+[![License: MPL 2.0](https://img.shields.io/badge/License-MPL_2.0-brightgreen.svg)](https://opensource.org/licenses/MPL-2.0)
+[![Node.js CI](https://github.com/remotex-labs/xPlist/actions/workflows/node.js.yml/badge.svg)](https://github.com/remotex-labs/xPlist/actions/workflows/node.js.yml)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/remotex-labs/xPlist)
+
 A lightweight TypeScript/JavaScript library for encoding and decoding property lists (plist) in both XML and binary formats. 
 Property Lists are commonly used in macOS and iOS applications for storing serialized data and configuration files.
-
-[](https://www.npmjs.com/package/@remotex-labs/xplist)[](https://opensource.org/licenses/MPL-2.0)[](https://www.npmjs.com/package/@remotex-labs/xplist)
 
 ## Features
 - **Universal Formats**: Encode and decode between JavaScript objects and both XML and binary plist formats
